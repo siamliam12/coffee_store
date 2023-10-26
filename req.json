@@ -1,0 +1,8 @@
+{
+    "Name":"test coffee",      
+    "Price":14,
+    "Description":"testing the req", 
+    "Sizes":"regular",
+    "Types":"cold",
+    "Flavour":"chocolate"
+    }
