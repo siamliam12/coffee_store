@@ -8,4 +8,5 @@ import (
 func CoffeeRoute(app *fiber.App) {
 	//all routes related to coffee comes here
 	app.Post("/coffee", controllers.CreateCoffee)
+	app.Get("/coffee/:coffeeId", controllers.GetACoffee)
 }

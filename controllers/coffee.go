@@ -12,6 +12,7 @@ import (
 	"github.com/siamliam12/coffee_store/models"
 	"github.com/siamliam12/coffee_store/responses"
 	"github.com/siamliam12/coffee_store/utils"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/gridfs"
@@ -112,6 +113,7 @@ func CreateCoffee(c *fiber.Ctx) error {
 		Sizes:       coffee.Sizes,
 		Category:    coffee.Category,
 		Flavour:     coffee.Flavour,
+		ImageFileID: fieldId.(primitive.ObjectID),
 	}
 	result, err := coffeeCollection.InsertOne(ctx, newCoffee)
 	if err != nil {
@@ -124,4 +126,52 @@ func CreateCoffee(c *fiber.Ctx) error {
 			"name": fileHeader.Filename,
 			"size": filesize,
 		}}})
+}
+
+func GetACoffee(c *fiber.Ctx) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Second)
+	coffeeId := c.Params("coffeeId")
+	var coffee models.Coffee
+	defer cancel()
+
+	//get coffee data
+	objId, _ := primitive.ObjectIDFromHex(coffeeId)
+	err := coffeeCollection.FindOne(ctx, bson.M{"id": objId}).Decode(&coffee)
+	if err != nil {
+		return c.Status(http.StatusInternalServerError).JSON(responses.CoffeeResponse{Status: http.StatusInternalServerError, Message: "error", Data: &fiber.Map{"data": err.Error()}})
+	}
+
+	//functional variable for database connection
+	// Create db connection
+	db := utils.ConnectDB().Database("cafe")
+	//get image associated with it
+	var imageBytes []byte
+	bucket, err := gridfs.NewBucket(db)
+	if err != nil {
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+			"error": true,
+			"msg":   err.Error(),
+		})
+	}
+	imageStream, err := bucket.OpenDownloadStream(coffee.ImageFileID)
+	if err != nil {
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+			"error": true,
+			"msg":   err.Error(),
+		})
+	}
+	defer imageStream.Close()
+
+	imageBytes, err = io.ReadAll(imageStream)
+	if err != nil {
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+			"error": true,
+			"msg":   err.Error(),
+		})
+	}
+
+	return c.Status(http.StatusOK).JSON(responses.CoffeeResponse{Status: http.StatusOK, Message: "success", Data: &fiber.Map{
+		"data":      coffee,
+		"imageData": imageBytes,
+	}})
 }

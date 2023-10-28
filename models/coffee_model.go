@@ -10,4 +10,5 @@ type Coffee struct {
 	Sizes       string             `json:"sizes,omitempty" validate:"required"`
 	Category    string             `json:"category,omitempty" validate:"required"`
 	Flavour     string             `json:"flavour,omitempty" validate:"required"`
+	ImageFileID primitive.ObjectID `json:"imageFileID" bson:"imageFileID"`
 }
