@@ -7,11 +7,5 @@ from app.models import user_model
 
 app = FastAPI()
 Base.metadata.create_all(engine)
-def get_db():
-    db = SessionLocal()
-    try: 
-        yield db
-    finally:
-        db.close()
 
 app.include_router(user_routes.router, prefix="/api/auth")
