@@ -6,6 +6,10 @@ class CreateUser(BaseModel):
     email : str
     password : str
     name: str
+    on_duty :str
+    role :str
+    card_number: int
+    
 
 class UserLogin(BaseModel):
     email : str

@@ -1,36 +1,46 @@
 from fastapi import APIRouter,status,Depends
 from app.crud import user_controller
-from app.schemas.userSchema import UserOutput,CreateUser
-from app.db.database import engine,SessionLocal,Base
+from app.schemas.userSchema import CreateUser,UserOutput
 from sqlalchemy.orm import Session
-from app.utils.password_manager import get_hashed_password
-from app.models import user_model
-router = APIRouter()
+from fastapi.security import OAuth2PasswordRequestForm
+from app.dependencies import get_db
+from app.dependencies import get_current_user
 
-def get_db():
-    db = SessionLocal()
-    try: 
-        yield db
-    finally:
-        db.close()
+router = APIRouter(tags=["Admin API"])
+
+#get all users
 @router.get("/users")
-def get_users():
-    return user_controller.get_users()
+def get_users(db:Session = Depends(get_db)):
+    return user_controller.get_users(db)
 
+#get user by id
 @router.get("/users/{user_id}")
-def get_users(user_id: int):
-    return user_controller.get_user_by_id(user_id)
+def get_users_by_id(user_id: int,db:Session = Depends(get_db)):
+    return user_controller.get_user_by_id(user_id,db)
 
-@router.post("/signup",status_code=status.HTTP_201_CREATED,response_model = UserOutput)
+#create user by id
+@router.post("/signup",status_code=status.HTTP_201_CREATED,response_model = UserOutput,tags=["Authentication"])
 def create_user(user:CreateUser,db:Session = Depends(get_db)):
-    # Hash The Password
-    hashed_pass = get_hashed_password(user.password)
+    return user_controller.create_user(user,db)
 
-    user.password = hashed_pass
+#login user
+@router.post("/login",tags=["Authentication"])
+def login_user(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    return user_controller.login_user(form_data,db)
 
-    new_user = user_model.User(**user.dict())
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
+#update user by id
+@router.put("/update_user/{user_id}",tags=["Admin API"])
+def update_user(
+    user_id: int,
+    user: CreateUser,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)):
+    return user_controller.update_user(user_id,user,db,current_user)
 
-    return new_user
+#delete user by id
+@router.delete("/delete_user/{user_id}",tags=["Admin API"])
+def delete_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)):
+    return user_controller.delete_user(user_id,db,current_user)
